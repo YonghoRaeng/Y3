@@ -1,0 +1,2512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부동산 지도</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAVgDetM4EesI8oUJ_w9LyAfBqL9BmaYD8"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        :root {
+            --primary-color: #007BFF;
+            --secondary-color: #28A745;
+            --warning-color: #FFC107;
+            --background-color: #F8F9FA;
+            --white: #FFFFFF;
+            --gray-100: #F8F9FA;
+            --gray-200: #E9ECEF;
+            --gray-300: #DEE2E6;
+            --gray-600: #6C757D;
+            --gray-800: #343A40;
+        }
+
+        body {
+            background-color: var(--background-color);
+        }
+
+        /* 헤더 스타일 */
+        header {
+            background: var(--white);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .logo i {
+            margin-right: 8px;
+        }
+
+        .search-container {
+            flex: 1;
+            max-width: 600px;
+            margin: 0 40px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 8px 16px;
+            border: 1px solid var(--gray-300);
+            border-radius: 24px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-menu a {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .nav-menu a:hover {
+            color: var(--primary-color);
+        }
+
+        .login-btn {
+            background: var(--primary-color);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* 메인 컨텐츠 영역 */
+        .main-container {
+            margin-top: 60px;
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+
+        /* 필터 사이드바 */
+        .sidebar {
+            width: 300px;
+            background: var(--white);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid var(--gray-200);
+        }
+
+        .filter-section {
+            margin-bottom: 24px;
+        }
+
+        .filter-section h3 {
+            font-size: 16px;
+            color: var(--gray-800);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .filter-section h3 i {
+            margin-right: 8px;
+            color: var(--gray-600);
+            font-size: 20px;
+        }
+
+        .filter-option {
+            background: var(--white);
+            border: 1px solid var(--gray-300);
+            padding: 8px 12px;
+            border-radius: 4px;
+            width: 100%;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        /* 지도 영역 */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 상세 정보 패널 */
+        .detail-panel {
+            position: fixed;
+            right: -400px;
+            top: 60px;
+            width: 400px;
+            height: calc(100vh - 60px);
+            background: var(--white);
+            box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .detail-panel.active {
+            right: 0;
+        }
+
+        .detail-header {
+            padding: 20px;
+            background: var(--gray-100);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .detail-header h2 {
+            font-size: 20px;
+            color: var(--gray-800);
+            margin-bottom: 8px;
+        }
+
+        .detail-content {
+            padding: 20px;
+        }
+
+        .property-image {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .property-info {
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .info-item i {
+            color: var(--gray-600);
+            margin-right: 12px;
+            font-size: 20px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .action-button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .favorite-button {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .contact-button {
+            background: var(--warning-color);
+            color: var(--gray-800);
+        }
+
+        .close-button {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray-600);
+        }
+
+        /* 푸터 */
+        footer {
+            background: var(--white);
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 12px;
+        }
+
+        .footer-links a {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .copyright {
+            color: var(--gray-600);
+            font-size: 12px;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -300px;
+                top: 60px;
+                height: calc(100vh - 60px);
+                transition: left 0.3s ease;
+                z-index: 900;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .detail-panel {
+                width: 100%;
+                right: -100%;
+            }
+
+            .detail-panel.active {
+                right: 0;
+            }
+
+            .search-container {
+                margin: 0 20px;
+            }
+
+            .nav-menu {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <header>
+        <a href="#" class="logo">
+            <i class="material-icons">location_on</i>
+            부동산 지도
+        </a>
+        <div class="search-container">
+            <input type="text" class="search-box" id="search" placeholder="지역, 지하철역, 건물명으로 검색">
+        </div>
+        <nav class="nav-menu">
+            <a href="#">지도 보기</a>
+            <a href="#">도움말</a>
+            <button class="login-btn">로그인</button>
+        </nav>
+    </header>
+
+    <!-- 메인 컨텐츠 -->
+    <div class="main-container">
+        <!-- 필터 사이드바 -->
+        <div class="sidebar">
+            <div class="filter-section">
+                <h3><i class="material-icons">square_foot</i>임대면적</h3>
+                <select id="area-filter" class="filter-option">
+                    <option value="all">전체</option>
+                    <option value="small">500평 이하</option>
+                    <option value="medium">500~1000평</option>
+                    <option value="large">1000평 이상</option>
+                </select>
+            </div>
+
+            <div class="filter-section">
+                <h3><i class="material-icons">event</i>준공연도</h3>
+                <select id="year-filter" class="filter-option">
+                    <option value="all">전체</option>
+                    <option value="before-2000">2000년 이전</option>
+                    <option value="2000-2010">2000~2010년</option>
+                    <option value="after-2010">2011년 이후</option>
+                </select>
+            </div>
+
+            <div class="filter-section">
+                <h3><i class="material-icons">business</i>용도</h3>
+                <select id="purpose-filter" class="filter-option">
+                    <option value="all">전체</option>
+                    <option value="commercial">상업</option>
+                    <option value="office">오피스</option>
+                    <option value="residential">주거</option>
+                    <option value="mixed">복합</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 지도 영역 -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- 상세 정보 패널 -->
+        <div class="detail-panel">
+            <button class="close-button material-icons">close</button>
+            <div class="detail-header">
+                <h2 id="property-name"></h2>
+                <p id="property-address" style="color: var(--gray-600);"></p>
+            </div>
+            <div class="detail-content">
+                <img class="property-image" src="/api/placeholder/400/240" alt="건물 이미지">
+                <div class="property-info">
+                    <div class="info-item">
+                        <i class="material-icons">square_foot</i>
+                        <div>
+                            <div style="font-weight: 500;">임대면적</div>
+                            <div id="property-area"></div>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <i class="material-icons">business</i>
+                        <div>
+                            <div style="font-weight: 500;">용도</div>
+                            <div id="property-purpose"></div>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <i class="material-icons">event</i>
+                        <div>
+                            <div style="font-weight: 500;">준공연도</div>
+                            <div id="property-year"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-button favorite-button">
+                        <i class="material-icons">star</i>
+                        즐겨찾기
+                    </button>
+                    <button class="action-button contact-button">
+                        <i class="material-icons">mail</i>
+                        문의하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 푸터 -->
+    <footer>
+        <div class="footer-links">
+            <a href="#">이용약관</a>
+            <a href="#">개인정보처리방침</a>
+            <a href="#">도움말</a>
+            <a href="#">문의하기</a>
+        </div>
+        <div class="copyright">
+            © 2024 부동산 지도. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        // 샘플 데이터
+
+        const properties = [
+
+{
+    id: 1,
+    name: "CCMM빌딩",
+    lat: 37.5292719570904,
+    lng: 126.924892738645,
+    address: "서울시 영등포구 여의도동 12",
+    area: 1840.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 2,
+    name: "서울스퀘어",
+    lat: 37.555503632236,
+    lng: 126.973751343837,
+    address: "서울 중구 남대문로5가 541",
+    area: 1619.73,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 3,
+    name: "GFC(강남파이낸스센터)",
+    lat: 37.5000242405515,
+    lng: 127.036508620542,
+    address: "서울시 강남구 역삼동 737",
+    area: 1518.99,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 4,
+    name: "오토웨이타워",
+    lat: 37.506288395234,
+    lng: 127.063692550186,
+    address: "서울시 강남구 대치동 948",
+    area: 1378.64,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 5,
+    name: "공평15.16지구 도시정비형 재개발 사업",
+    lat: 37.570601681109,
+    lng: 126.986303249503,
+    address: "서울 종로구 인사동 87",
+    area: 1325.47,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 6,
+    name: "광화문교보생명빌딩",
+    lat: 37.5709578373114,
+    lng: 126.977928770123,
+    address: "서울 종로구 종로1가 1",
+    area: 1180.29,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 7,
+    name: "세미콜론 문래 N타워*",
+    lat: 37.5163887012653,
+    lng: 126.899975370783,
+    address: "서울시 영등포구 문래동3가 55-18",
+    area: 1165.23,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 8,
+    name: "GS타워",
+    lat: 37.510356849269,
+    lng: 127.061023782931,
+    address: "서울 강남구 삼성동 159",
+    area: 1161.79,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 9,
+    name: "세미콜론 문래 S타워*",
+    lat: 37.5163887012653,
+    lng: 126.899975370783,
+    address: "서울시 영등포구 문래동3가 55-18",
+    area: 1152.56,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 10,
+    name: "센터필드 웨스트*",
+    lat: 37.5028813541774,
+    lng: 127.041356540268,
+    address: "서울 강남구 역삼동 676",
+    area: 1117.52,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 11,
+    name: "서초동아타워",
+    lat: 37.495994185,
+    lng: 127.025267395048,
+    address: "서울시 서초구 서초동 1321-6",
+    area: 1115.88,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 12,
+    name: "을지트윈 A동(west)*",
+    lat: 37.5661391831606,
+    lng: 126.99732748195,
+    address: "서울 중구 을지로4가 323",
+    area: 1091.34,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 13,
+    name: "을지트윈 B동(east)*",
+    lat: 37.5661391831606,
+    lng: 126.99732748195,
+    address: "서울 중구 을지로4가 323",
+    area: 1091.34,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 14,
+    name: "그랑서울 타워1*",
+    lat: 37.5709617749066,
+    lng: 126.981437983842,
+    address: "서울 종로구 청진동 70 ",
+    area: 1054.19,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 15,
+    name: "그랑서울 타워2*",
+    lat: 37.5709617749066,
+    lng: 126.981437983842,
+    address: "서울 종로구 청진동 70 ",
+    area: 1054.19,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 16,
+    name: "FKI타워(전경련)",
+    lat: 37.5221803249647,
+    lng: 126.919916550827,
+    address: "서울시 영등포구 여의도동 28-1",
+    area: 1040.548575,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 17,
+    name: "파크원 타워1*",
+    lat: 37.5251913154781,
+    lng: 126.929112756574,
+    address: "서울시 영등포구 여의도동 22",
+    area: 1033.34,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 18,
+    name: "남산스퀘어",
+    lat: 37.5618257152508,
+    lng: 126.991058542501,
+    address: "서울 중구 충무로3가 60-1",
+    area: 1018.38,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 19,
+    name: "IFC THREE*",
+    lat: 37.5251775245928,
+    lng: 126.924876706923,
+    address: "서울시 영등포구 여의도동 23",
+    area: 1013.59885,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 20,
+    name: "삼성생명서초타워",
+    lat: 37.4967437284397,
+    lng: 127.025703589132,
+    address: "	서울시 서초구 서초동 1321-15",
+    area: 1009.9,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 21,
+    name: "여의도 태영빌딩",
+    lat: 37.5297971715548,
+    lng: 126.925780657778,
+    address: "서울시 영등포구 여의도동 10-2",
+    area: 1008.38,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 22,
+    name: "파크원 타워2(NH)*",
+    lat: 37.5251913154781,
+    lng: 126.929112756574,
+    address: "서울시 영등포구 여의도동 22",
+    area: 1004.84,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 23,
+    name: "KT여의도빌딩",
+    lat: 37.5221803249647,
+    lng: 126.919916550827,
+    address: "서울시 영등포구 여의도동 28-1",
+    area: 997.660125,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 24,
+    name: "중소기업중앙회",
+    lat: 37.5281995830714,
+    lng: 126.922656059858,
+    address: "서울시 영등포구 여의도동16-2",
+    area: 996.46,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 25,
+    name: "센터필드 이스트*",
+    lat: 37.5028813541774,
+    lng: 127.041356540268,
+    address: "서울 강남구 역삼동 676",
+    area: 985.31,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 26,
+    name: "TP타워(사학연금)",
+    lat: 37.521547851978,
+    lng: 126.92294256449,
+    address: "서울시 영등포구 여의도동 27-2",
+    area: 981.27975,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 27,
+    name: "트레이드타워",
+    lat: 37.5019949322814,
+    lng: 127.037336400239,
+    address: "서울 강남구 역삼동 679-1",
+    area: 978.22,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 28,
+    name: "종로플레이스",
+    lat: 37.5729815403513,
+    lng: 126.998249476942,
+    address: "서울 종로구 인의동 28-8",
+    area: 972.73,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 29,
+    name: "SK증권빌딩",
+    lat: 37.5197460148873,
+    lng: 126.928066576601,
+    address: "서울시 영등포구 여의도동45-1",
+    area: 969.9390249999999,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 30,
+    name: "더에셋 강남",
+    lat: 37.5037560541254,
+    lng: 127.024109539913,
+    address: "서울시 서초구 서초동 1303-22",
+    area: 968.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 31,
+    name: "교보타워",
+    lat: 37.5165777895252,
+    lng: 127.101225932288,
+    address: "서울시 송파구 신천동 7-29",
+    area: 958.81,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 32,
+    name: "파르나스",
+    lat: 37.4847315992014,
+    lng: 127.017803806463,
+    address: "서울시 서초구 서초동 1445-3",
+    area: 956.65,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 33,
+    name: "연세세브란스빌딩",
+    lat: 37.5570966597,
+    lng: 126.973633761228,
+    address: "서울 중구 남대문로5가 84-11",
+    area: 953.89,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 34,
+    name: "KT&G타워",
+    lat: 37.5032355765545,
+    lng: 127.046582379785,
+    address: "	서울 강남구 역삼동 707-24",
+    area: 940.86,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 35,
+    name: "서울파이낸스센터(SFC)",
+    lat: 37.5684232177354,
+    lng: 126.97825653257,
+    address: "서울 중구 태평로1가 84",
+    area: 939.48,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 36,
+    name: "IFC ONE*",
+    lat: 37.5251775245928,
+    lng: 126.924876706923,
+    address: "서울시 영등포구 여의도동 23",
+    area: 926.3397,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 37,
+    name: "돈의문 디타워",
+    lat: 37.5667996863316,
+    lng: 126.966255525958,
+    address: "서울 종로구 평동 234",
+    area: 919.08,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 38,
+    name: "삼성본관빌딩",
+    lat: 37.5623085377513,
+    lng: 126.975593964647,
+    address: "서울 중구 태평로2가 250",
+    area: 911.05,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 39,
+    name: "태흥빌딩(구 빌딩8)",
+    lat: 37.5278708587376,
+    lng: 126.916895169744,
+    address: "서울시 영등포구 여의도동17-3",
+    area: 910.74885,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 40,
+    name: "연합뉴스빌딩",
+    lat: 37.5743642341595,
+    lng: 126.98051726008,
+    address: "서울 종로구 수송동 110",
+    area: 909.58,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 41,
+    name: "IFC TWO*",
+    lat: 37.5251775245928,
+    lng: 126.924876706923,
+    address: "서울시 영등포구 여의도동 23",
+    area: 901.2987499999999,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 42,
+    name: "삼풍넥서스",
+    lat: 37.5659276672957,
+    lng: 126.995590487854,
+    address: "서울 중구 을지로4가 310-68",
+    area: 894.31,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 43,
+    name: "하나증권빌딩(구 하나금융투자)",
+    lat: 37.522682850023,
+    lng: 126.921853372269,
+    address: "서울시 영등포구 여의도동27-3",
+    area: 889.401425,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 44,
+    name: "센트로폴리스 A동*",
+    lat: 37.5716808092144,
+    lng: 126.983530268891,
+    address: "서울 종로구 공평동 17",
+    area: 879.54,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 45,
+    name: "리버타워",
+    lat: 37.5194206669589,
+    lng: 126.938610362668,
+    address: "서울시 영등포구 여의도동 61-5",
+    area: 874.14,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 46,
+    name: "센터포인트서초(국제전자센터)",
+    lat: 37.510356849269,
+    lng: 127.061023782931,
+    address: "	서울시 강남구 삼성동 159-1",
+    area: 870.86,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 47,
+    name: "스테이트타워",
+    lat: 37.5602069895052,
+    lng: 126.982926486564,
+    address: "서울 중구 회현동2가 88",
+    area: 862.67,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 48,
+    name: "시그니쳐타워",
+    lat: 37.5674727196383,
+    lng: 126.98811318937,
+    address: "서울 중구 수표동 99",
+    area: 860.26,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 49,
+    name: "아셈타워",
+    lat: 37.4939942678007,
+    lng: 127.030065181843,
+    address: "서울 강남구 강남대로 350",
+    area: 857.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 50,
+    name: "글라스타워",
+    lat: 37.4997440471512,
+    lng: 127.034954751198,
+    address: "	서울시 강남구 역삼동 736-1",
+    area: 853.45,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 51,
+    name: "센터원 East Tower*",
+    lat: 37.5673399451193,
+    lng: 126.985208946848,
+    address: "서울특별시 중구 수하동 67",
+    area: 846.03,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 52,
+    name: "광화문오피시아",
+    lat: 37.5696996246023,
+    lng: 126.974907969051,
+    address: "서울 종로구 신문로1가 163",
+    area: 840.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 53,
+    name: "한화생명본사",
+    lat: 37.5196641552816,
+    lng: 126.939909338068,
+    address: "서울시 영등포구 여의도동 60",
+    area: 834.19,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 54,
+    name: "파인에비뉴 A동*",
+    lat: 37.5656490167105,
+    lng: 126.988142568678,
+    address: "서울 중구 을지로2가 203",
+    area: 832.83,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 55,
+    name: "아크플레이스",
+    lat: 37.5015976461467,
+    lng: 127.037722864045,
+    address: "서울시 강남구 역삼동 679-4",
+    area: 829.66,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 56,
+    name: "KDB생명타워",
+    lat: 37.5516315844006,
+    lng: 126.972912206176,
+    address: "서울 용산구 동자동 45",
+    area: 827.79,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 57,
+    name: "삼일프라자",
+    lat: 37.4909660727073,
+    lng: 127.032448514658,
+    address: "서울시 강남구 역삼동 837-26",
+    area: 820.2,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 58,
+    name: "원센티널(구 신한투자증권)",
+    lat: 37.5248391165921,
+    lng: 126.924184821656,
+    address: "서울시 영등포구 여의도동 23-2",
+    area: 817.2007249999999,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 59,
+    name: "서울시티타워",
+    lat: 37.5539215267466,
+    lng: 126.973961491524,
+    address: "서울 중구 남대문로5가 581",
+    area: 803.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 60,
+    name: "한국지식재산센터",
+    lat: 37.5000818732753,
+    lng: 127.032937953168,
+    address: "서울시 강남구 역삼동 647-9",
+    area: 797.82,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 61,
+    name: "퍼시픽타워",
+    lat: 37.5613582316301,
+    lng: 126.97299628821,
+    address: "서울 중구 서소문동 135",
+    area: 795.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 62,
+    name: "한신인터밸리24",
+    lat: 37.4959645356639,
+    lng: 127.026124445155,
+    address: "	서울시 서초구 서초동 1321-20",
+    area: 790.54,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 63,
+    name: "센터포인트 웨스트",
+    lat: 37.5070438414784,
+    lng: 126.890227293528,
+    address: "서울시 구로구 구로동 3-25",
+    area: 779.85,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 64,
+    name: "KT&G서대문",
+    lat: 37.5638625904566,
+    lng: 126.966154870127,
+    address: "서울 서대문구 미근동 21-1",
+    area: 746.59,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 65,
+    name: "센터원 West Tower*",
+    lat: 37.5673399451193,
+    lng: 126.985208946848,
+    address: "서울특별시 중구 수하동 67",
+    area: 740.9,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 66,
+    name: "센트로폴리스 B동*",
+    lat: 37.5716808092144,
+    lng: 126.983530268891,
+    address: "서울 종로구 공평동 17",
+    area: 736.39,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 67,
+    name: "프로젝트107",
+    lat: 37.5648801960179,
+    lng: 126.991228638001,
+    address: "서울 중구 초동 107-12",
+    area: 735.08,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 68,
+    name: "루첸타워",
+    lat: 37.507001535999,
+    lng: 127.058656127092,
+    address: "서울 강남구 대치동 943-5",
+    area: 728.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 69,
+    name: "Im증권빌딩(구 하이투자)",
+    lat: 37.5245403141563,
+    lng: 126.923718250438,
+    address: "서울시 영등포구 여의도동 23-3",
+    area: 726.9800999999999,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 70,
+    name: "파인에비뉴 B동*",
+    lat: 37.5656490167105,
+    lng: 126.988142568678,
+    address: "서울 중구 을지로2가 203",
+    area: 725.75,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 71,
+    name: "광화문G타워",
+    lat: 37.5726674875411,
+    lng: 126.981114262989,
+    address: "서울 종로구 수송동 156",
+    area: 722.77,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 72,
+    name: "포스코센터",
+    lat: 37.5058149679709,
+    lng: 127.056130956028,
+    address: "서울시 강남구 대치동 892",
+    area: 718.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 73,
+    name: "미원빌딩",
+    lat: 37.5214946207638,
+    lng: 126.930677790628,
+    address: "서울시 영등포구 여의도동 43",
+    area: 715.24,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 74,
+    name: "삼성생명대치타워",
+    lat: 37.5054927426089,
+    lng: 127.053467711791,
+    address: "서울시 강남구 대치동 891",
+    area: 700.57,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 75,
+    name: "더피나클강남타워",
+    lat: 37.5174807661856,
+    lng: 127.040619500921,
+    address: "서울시 강남구 논현동 119",
+    area: 698.32,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 76,
+    name: "섬유센터",
+    lat: 37.5075910839105,
+    lng: 127.060579419429,
+    address: "	서울시 강남구 대치동 944-31",
+    area: 693.73,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 77,
+    name: "한화금융센터 태평로 사옥",
+    lat: 37.5642332782202,
+    lng: 126.977571839325,
+    address: "서울 중구 태평로2가 43",
+    area: 690.31,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 78,
+    name: "삼성생명서소문(구 일보빌딩)",
+    lat: 37.5615533635266,
+    lng: 126.970995828671,
+    address: "서울 중구  순화동 7",
+    area: 685.4,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 79,
+    name: "SC은행 본점빌딩",
+    lat: 37.5711250081852,
+    lng: 126.982438945074,
+    address: "서울 종로구 공평동 100",
+    area: 683.6,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 80,
+    name: "디타워 B동*",
+    lat: 37.5709958592808,
+    lng: 126.978914477333,
+    address: "서울 종로구 청진동 246",
+    area: 683.38,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 81,
+    name: "씨티센터타워",
+    lat: 37.564378723742,
+    lng: 126.990358289779,
+    address: "서울 중구 저동2가 24-1",
+    area: 679.3,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 82,
+    name: "강남N타워",
+    lat: 37.4900614477694,
+    lng: 127.032167924402,
+    address: "	서울시 강남구 역삼동 838",
+    area: 676.06,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 83,
+    name: "부영태평빌딩 (구 삼성생명본사)",
+    lat: 37.5616192365957,
+    lng: 126.974978475659,
+    address: "서울 중구 태평로2가 150",
+    area: 674.3,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 84,
+    name: "KB라이프",
+    lat: 37.4981083450113,
+    lng: 127.025922653572,
+    address: "서울시 서초구 서초동 1317-23",
+    area: 672.46,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 85,
+    name: "영풍빌딩",
+    lat: 37.5696679696981,
+    lng: 126.982179278549,
+    address: "서울 종로구 서린동 33",
+    area: 670.29,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 86,
+    name: "포스트타워",
+    lat: 37.5223003029771,
+    lng: 126.926225192863,
+    address: "서울시 영등포구 여의도동35-1",
+    area: 670.17,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 87,
+    name: "성원타워",
+    lat: 37.5056023729557,
+    lng: 127.049162712328,
+    address: "	서울시 강남구 삼성동 141",
+    area: 663.97,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 88,
+    name: "코레일유통",
+    lat: 37.5257951979369,
+    lng: 126.902053880256,
+    address: "서울시 영등포구 당산동3가 2-7",
+    area: 663.81,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 89,
+    name: "교보증권빌딩",
+    lat: 37.522516139033,
+    lng: 126.924586046016,
+    address: "서울시 영등포구 여의도동 26-4",
+    area: 662.0000749999999,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 90,
+    name: "SI타워",
+    lat: 37.5065841136869,
+    lng: 127.065326637295,
+    address: "	서울시 강남구 대치동 1002",
+    area: 658.56,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 91,
+    name: "메리츠화재 봉래신사옥",
+    lat: 37.5592510458885,
+    lng: 126.97211628887,
+    address: "서울 중구 봉래동1가 57-2",
+    area: 652.36,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 92,
+    name: "D&O강남",
+    lat: 37.4852652574455,
+    lng: 127.036620497399,
+    address: "	서울시 강남구 도곡동 956",
+    area: 650.88,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 93,
+    name: "HSBC빌딩",
+    lat: 37.5600945910789,
+    lng: 126.973029000676,
+    address: "서울 중구 봉래동1가 25",
+    area: 646.54,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 94,
+    name: "그랜드센트럴 A동 *",
+    lat: 37.5578385325826,
+    lng: 126.9744151,
+    address: "서울 중구 남대문로5가 831",
+    area: 635.15,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 95,
+    name: "그랜드센트럴 B동*",
+    lat: 37.5578385325826,
+    lng: 126.9744151,
+    address: "서울 중구 남대문로5가 831",
+    area: 635.15,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 96,
+    name: "디타워 A동*",
+    lat: 37.5709958592808,
+    lng: 126.978914477333,
+    address: "서울 종로구 청진동 246",
+    area: 634.24,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 97,
+    name: "대신343 (구 대신파이낸스센터)",
+    lat: 37.5651004556362,
+    lng: 126.986959615068,
+    address: "서울 중구 저동1가 114",
+    area: 633.02,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 98,
+    name: "페럼타워",
+    lat: 37.5669394038707,
+    lng: 126.98414050544,
+    address: "서울 중구 수하동 66",
+    area: 632.81,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 99,
+    name: "그레이츠숭례(구,와이즈타워)",
+    lat: 37.5586238568696,
+    lng: 126.973263470061,
+    address: "서울 중구 남대문로5가 6-3",
+    area: 629.3,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 100,
+    name: "여의도한화금융",
+    lat: 37.5240793528555,
+    lng: 126.922872650933,
+    address: "서울시 영등포구 여의도동 23-5",
+    area: 624.67,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 101,
+    name: "아남타워",
+    lat: 37.5037441420961,
+    lng: 127.044854487099,
+    address: "서울시 강남구 역삼동 702-10",
+    area: 617.02,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 102,
+    name: "혜성2빌딩",
+    lat: 37.5066268201681,
+    lng: 127.057346932213,
+    address: "서울시 강남구 대치동 942",
+    area: 617.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 103,
+    name: "이마빌딩",
+    lat: 37.5739029320481,
+    lng: 126.978983502911,
+    address: "서울 종로구 수송동 146-1",
+    area: 616.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 104,
+    name: "마제스타시티2*",
+    lat: 37.4904950346372,
+    lng: 127.005381592272,
+    address: "서울 서초구 서초동 1498-5 ",
+    area: 612.21,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 105,
+    name: "한국프레스센터",
+    lat: 37.5674198878673,
+    lng: 126.977873671097,
+    address: "서울 중구 태평로1가 25",
+    area: 612.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 106,
+    name: "아세아타워",
+    lat: 37.499001193592,
+    lng: 127.038355416717,
+    address: "서울시 강남구 역삼동 726",
+    area: 612.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 107,
+    name: "아이콘삼성(골든타워)",
+    lat: 37.5076641818487,
+    lng: 127.055577805588,
+    address: "서울시 강남구 삼성동 144-17",
+    area: 609.4,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 108,
+    name: "린스퀘어",
+    lat: 37.4887462103566,
+    lng: 127.053214137263,
+    address: "서울시 강남구 도곡동 467-14",
+    area: 608.92,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 109,
+    name: "여의도파이낸스타워",
+    lat: 37.5238640247561,
+    lng: 126.924142368161,
+    address: "서울시 영등포구 여의도동 23-8",
+    area: 607.7104,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 110,
+    name: "HJ타워",
+    lat: 37.503774633134,
+    lng: 127.048192060882,
+    address: "서울시 강남구 역삼동 708-4",
+    area: 606.92,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 111,
+    name: "메리츠타워",
+    lat: 37.5080381764122,
+    lng: 127.06279566981,
+    address: "	서울시 강남구 대치동 946-1",
+    area: 606.52,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 112,
+    name: "내외빌딩",
+    lat: 37.5664928978912,
+    lng: 126.983681840765,
+    address: "서울 중구 을지로2가 6",
+    area: 605.67,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 113,
+    name: "트윈시티남산* 오피스동",
+    lat: 37.5510861198751,
+    lng: 126.972911385084,
+    address: "서울 용산구 동자동 56",
+    area: 600.45,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 114,
+    name: "장교빌딩",
+    lat: 37.5671565387212,
+    lng: 126.987052299704,
+    address: "서울 중구 장교동 1",
+    area: 593.2,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 115,
+    name: "광화문빌딩",
+    lat: 37.5695711278314,
+    lng: 126.976140249913,
+    address: "서울 종로구 세종로 211",
+    area: 590.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 116,
+    name: "BNK금융타워",
+    lat: 37.5243047905812,
+    lng: 126.924840024112,
+    address: "서울시 영등포구 여의도동 23-10",
+    area: 589.248825,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 117,
+    name: "TOWER8",
+    lat: 37.5706161018862,
+    lng: 126.980559892691,
+    address: "서울 종로구 청진동 128",
+    area: 584.24,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 118,
+    name: "오투타워",
+    lat: 37.5233667660094,
+    lng: 126.923451000009,
+    address: "서울시 영등포구 여의도동 23-6",
+    area: 580.921,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 119,
+    name: "랜드마크타워",
+    lat: 37.4906156768866,
+    lng: 127.031763351903,
+    address: "서울시 강남구 역삼동 837-36",
+    area: 576.36,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 120,
+    name: "배재정동빌딩 A동*",
+    lat: 37.5637878280982,
+    lng: 126.972089131199,
+    address: "서울 중구 정동 34-5",
+    area: 575.66,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 121,
+    name: "삼원타워(구 풍림빌딩)",
+    lat: 37.4987846719974,
+    lng: 127.031703595662,
+    address: "서울시 강남구 역삼동 823",
+    area: 569.93,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 122,
+    name: "스케일타워",
+    lat: 37.4999326440603,
+    lng: 127.032367803374,
+    address: " 서울 강남구 역삼동 648-9",
+    area: 567.77,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 123,
+    name: "현대차증권빌딩",
+    lat: 37.5240806711634,
+    lng: 126.924494536092,
+    address: "서울시 영등포구 여의도동 23-9",
+    area: 567.541425,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 124,
+    name: "유화증권빌딩",
+    lat: 37.5236263907411,
+    lng: 126.923800744264,
+    address: "서울시 영등포구 여의도동 23-7",
+    area: 561.0286,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 125,
+    name: "센터플레이스",
+    lat: 37.5671421016237,
+    lng: 126.980368823536,
+    address: "서울 중구 다동 155",
+    area: 560.09,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 126,
+    name: "에티버스타워",
+    lat: 37.559371862901,
+    lng: 126.97620246899,
+    address: "서울 중구 남창동 51-1",
+    area: 560.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 127,
+    name: "포스코타워",
+    lat: 37.4993753300832,
+    lng: 127.033803449711,
+    address: "서울시 강남구 역삼동 735-3",
+    area: 556.8,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 128,
+    name: "더존을지빌딩",
+    lat: 37.5664884462972,
+    lng: 126.981025044659,
+    address: "서울 중구 을지로1가 87",
+    area: 553.48,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 129,
+    name: "ABL타워",
+    lat: 37.5188219877864,
+    lng: 126.927839304626,
+    address: "서울시 영등포구 여의도동 45-21",
+    area: 549.53965,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 130,
+    name: "BNK디지털타워",
+    lat: 37.4966368177214,
+    lng: 127.025104317477,
+    address: "서울시 서초구 서초동 1321-11",
+    area: 547.25,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 131,
+    name: "고려대연각타워",
+    lat: 37.5609575542822,
+    lng: 126.982545572081,
+    address: "서울 중구 충무로1가 25-5",
+    area: 544.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 132,
+    name: "동부금융센터",
+    lat: 37.4970486776201,
+    lng: 127.028627058312,
+    address: "서울 강남구 역삼동 825-11",
+    area: 541.92,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 133,
+    name: "코레이트타워",
+    lat: 37.5003740376418,
+    lng: 127.034004521906,
+    address: "서울 강남구 역삼동 646",
+    area: 540.3,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 134,
+    name: "한진빌딩본관",
+    lat: 37.5630641743761,
+    lng: 126.981365694181,
+    address: "서울 중구 남대문로2가 118",
+    area: 540.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 135,
+    name: "AIA타워",
+    lat: 37.5607570931577,
+    lng: 126.971491192729,
+    address: "서울 중구 순화동 216",
+    area: 533.63,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 136,
+    name: "큰길타워",
+    lat: 37.5024001842287,
+    lng: 127.040672852455,
+    address: "서울시 강남구 역삼동 677-25",
+    area: 529.59,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 137,
+    name: "삼성제일빌딩",
+    lat: 37.5035572530344,
+    lng: 127.04443196555,
+    address: "서울시 강남구 역삼동 702-2",
+    area: 528.04,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 138,
+    name: "혜성1빌딩",
+    lat: 37.5066268201681,
+    lng: 127.057346932213,
+    address: "서울시 강남구 대치동 942",
+    area: 524.1,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 139,
+    name: "카이트타워",
+    lat: 37.5025952829367,
+    lng: 127.044101954044,
+    address: "서울시 강남구 역삼동 706-1",
+    area: 522.88,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 140,
+    name: "강남역역삼빌딩",
+    lat: 37.4982884559713,
+    lng: 127.030103204318,
+    address: "서울시 강남구 역삼동 824",
+    area: 521.62,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 141,
+    name: "한화소공빌딩",
+    lat: 37.564196879416,
+    lng: 126.978549329641,
+    address: "서울 중구 소공동 110",
+    area: 517.31,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 142,
+    name: "동익성봉빌딩",
+    lat: 37.4943310255324,
+    lng: 127.014509432433,
+    address: "서울시 서초구 서초동 1692-1",
+    area: 512.09,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 143,
+    name: "캠코양재",
+    lat: 37.4869603647052,
+    lng: 127.033445189741,
+    address: "서울시 강남구 도곡동 949-3",
+    area: 504.61,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 144,
+    name: "동일타워",
+    lat: 37.5071243239638,
+    lng: 127.066992963064,
+    address: "	서울시 강남구 대치동 1004",
+    area: 502.39,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 145,
+    name: "동훈타워",
+    lat: 37.5039741806376,
+    lng: 127.045763234822,
+    address: "서울시 강남구 역삼동 702-19",
+    area: 496.31,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 146,
+    name: "T타워* 오피스동",
+    lat: 37.5539946799726,
+    lng: 126.975612746457,
+    address: "서울 중구 남대문로5가 827",
+    area: 491.66,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 147,
+    name: "신송센터빌딩",
+    lat: 37.523046311083,
+    lng: 126.925615622918,
+    address: "서울시 영등포구 여의도동25-12",
+    area: 489.998575,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 148,
+    name: "태평로빌딩",
+    lat: 37.5629636377183,
+    lng: 126.975961940855,
+    address: "서울 중구 태평로2가 310",
+    area: 482.11,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 149,
+    name: "GT타워",
+    lat: 37.5058806405734,
+    lng: 127.05481058047,
+    address: "	서울시 강남구 대치동 891-10",
+    area: 477.54,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 150,
+    name: "임광빌딩 NH농협생명 서관*",
+    lat: 37.5627767312819,
+    lng: 126.968512766878,
+    address: "서울 서대문구 미근동 257",
+    area: 460.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 151,
+    name: "배재정동빌딩 B동*",
+    lat: 37.5637878280982,
+    lng: 126.972089131199,
+    address: "서울 중구 정동 34-5",
+    area: 410.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 152,
+    name: "신한L강남타워(오렌지타워)",
+    lat: 37.5031713552332,
+    lng: 127.046070927032,
+    address: "서울시 강남구 역삼동 707-19",
+    area: 408.0,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 153,
+    name: "상록회관",
+    lat: 37.5039660612952,
+    lng: 127.042909941112,
+    address: "서울시 강남구 언주로 508",
+    area: 390.26,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 154,
+    name: "금융투자센터빌딩 (한국금융투자협회)",
+    lat: 37.519019862241,
+    lng: 126.927568082638,
+    address: "서울시 영등포구 여의도동 45-2",
+    area: 376.61,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 155,
+    name: "신사스퀘어",
+    lat: 37.5195659036492,
+    lng: 127.019091004701,
+    address: "서울 강남구 신사동 504-11",
+    area: 270.76,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 156,
+    name: "콘코디언",
+    lat: 37.5697975427046,
+    lng: 126.973177410043,
+    address: "서울 종로구 신문로1가 115",
+    area: 200.39,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+{
+    id: 157,
+    name: "시즌빌딩",
+    lat: 37.5717392736923,
+    lng: 127.01520169992,
+    address: "서울 종로구 창신동 328-18 ",
+    area: 138.98,
+    purpose: "office",  // Default value, you can update it based on your data
+    year: 2023,  // Default value, you can update it based on your data
+    image: "/api/placeholder/400/200"  // Default value, you can update it based on your data
+},
+
+];
+
+
+
+
+        // 지도 초기화
+        let map;
+        let markers = [];
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 37.5665, lng: 126.9780 },
+                zoom: 14,
+                    styles: [
+                        {
+                            featureType: "poi",
+                            elementType: "labels",
+                            stylers: [{ visibility: "off" }]
+                        }
+                    ]
+            });
+
+            // 마커 생성
+            properties.forEach(property => {
+                addMarker(property);
+            });
+        }
+
+        function addMarker(property) {
+            // 마커 스타일 설정
+            const markerIcon = {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: getPurposeColor(property.purpose),
+                fillOpacity: 0.8,
+                strokeWeight: 1,
+                strokeColor: '#FFFFFF',
+                scale: 10
+            };
+
+            const marker = new google.maps.Marker({
+                position: { lat: property.lat, lng: property.lng },
+                map: map,
+                icon: markerIcon,
+                title: property.name
+            });
+
+            // 마커에 호버 효과 추가
+            const infowindow = new google.maps.InfoWindow({
+                content: `
+                    <div style="padding: 10px;">
+                        <strong>${property.name}</strong><br>
+                        ${property.address}
+                    </div>
+                `
+            });
+
+            marker.addListener('mouseover', () => {
+                infowindow.open(map, marker);
+            });
+
+            marker.addListener('mouseout', () => {
+                infowindow.close();
+            });
+
+            marker.addListener('click', () => {
+                showPropertyDetails(property);
+            });
+
+            markers.push(marker);
+        }
+
+        function getPurposeColor(purpose) {
+            const colors = {
+                commercial: '#FFC107', // 상업용
+                office: '#007BFF',     // 오피스
+                residential: '#28A745', // 주거용
+                mixed: '#6C757D'       // 복합
+            };
+            return colors[purpose] || '#6C757D';
+        }
+
+        function showPropertyDetails(property) {
+            document.getElementById('property-name').textContent = property.name;
+            document.getElementById('property-address').textContent = property.address;
+            document.getElementById('property-area').textContent = `${property.area}평`;
+            document.getElementById('property-purpose').textContent = getPurposeName(property.purpose);
+            document.getElementById('property-year').textContent = `${property.year}년`;
+            
+            document.querySelector('.detail-panel').classList.add('active');
+        }
+
+        function getPurposeName(purpose) {
+            const purposes = {
+                commercial: '상업',
+                office: '오피스',
+                residential: '주거',
+                mixed: '복합'
+            };
+            return purposes[purpose] || purpose;
+        }
+
+        // 필터 이벤트 리스너
+        document.getElementById('area-filter').addEventListener('change', filterProperties);
+        document.getElementById('year-filter').addEventListener('change', filterProperties);
+        document.getElementById('purpose-filter').addEventListener('change', filterProperties);
+
+        function filterProperties() {
+            const areaFilter = document.getElementById('area-filter').value;
+            const yearFilter = document.getElementById('year-filter').value;
+            const purposeFilter = document.getElementById('purpose-filter').value;
+
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            const filteredProperties = properties.filter(property => {
+                let areaMatch = true;
+                let yearMatch = true;
+                let purposeMatch = true;
+
+                if (areaFilter !== 'all') {
+                    if (areaFilter === 'small') areaMatch = property.area <= 500;
+                    else if (areaFilter === 'medium') areaMatch = property.area > 500 && property.area <= 1000;
+                    else if (areaFilter === 'large') areaMatch = property.area > 1000;
+                }
+
+                if (yearFilter !== 'all') {
+                    if (yearFilter === 'before-2000') yearMatch = property.year < 2000;
+                    else if (yearFilter === '2000-2010') yearMatch = property.year >= 2000 && property.year <= 2010;
+                    else if (yearFilter === 'after-2010') yearMatch = property.year > 2010;
+                }
+
+                if (purposeFilter !== 'all') {
+                    purposeMatch = property.purpose === purposeFilter;
+                }
+
+                return areaMatch && yearMatch && purposeMatch;
+            });
+
+            filteredProperties.forEach(property => {
+                addMarker(property);
+            });
+        }
+
+        // 검색 기능
+        document.getElementById('search').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            const filteredProperties = properties.filter(property => 
+                property.name.toLowerCase().includes(searchTerm) ||
+                property.address.toLowerCase().includes(searchTerm)
+            );
+
+            filteredProperties.forEach(property => {
+                addMarker(property);
+            });
+        });
+
+        // 상세 패널 닫기
+        document.querySelector('.close-button').addEventListener('click', () => {
+            document.querySelector('.detail-panel').classList.remove('active');
+        });
+
+        // 즐겨찾기 기능
+        document.querySelector('.favorite-button').addEventListener('click', function() {
+            alert('즐겨찾기에 추가되었습니다.');
+        });
+
+        // 문의하기 기능
+        document.querySelector('.contact-button').addEventListener('click', function() {
+            alert('문의하기 기능은 준비중입니다.');
+        });
+
+        // 모바일 대응
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('active');
+        }
+
+        // 지도 초기화
+        initMap();
+    </script>
+</body>
+</html>
